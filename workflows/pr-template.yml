@@ -1,0 +1,54 @@
+name: Load PULL_REQUEST_TEMPLATE.md from Central Repo
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+env:
+  CENTRAL_REPO: 'https://github.com/natan-hespanhol/pullrequesttemplate'
+  TARGET_REPO: 'target-repo-url'
+
+jobs:
+  load-template:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v3
+
+      - name: Copy PULL_REQUEST_TEMPLATE.md
+        run: |
+          git fetch ${{ env.CENTRAL_REPO }}
+          cp ${{ env.CENTRAL_REPO }}/PULL_REQUEST_TEMPLATE.md .github/
+
+      - name: Update PR body
+        id: update_pr_body
+        uses: peter-evans/create-pull-request-action@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: '[Auto] Updated PULL_REQUEST_TEMPLATE.md'
+          body: |
+            This pull request automatically updates the PULL_REQUEST_TEMPLATE.md file.
+            
+            Changes:
+            - Updated from central repo: ${CENTRAL_REPO}
+            
+            Please review the changes and submit this pull request if everything looks good.
+          content-filepath: .github/PULL_REQUEST_TEMPLATE.md
+
+      - name: Delete local template file
+        run: |
+          rm .github/PULL_REQUEST_TEMPLATE.md
+
+      - name: Update PR body with new template
+        uses: peter-evans/create-pull-request-action@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: '[Auto] Updated PULL_REQUEST_TEMPLATE.md'
+          body: |
+            This pull request automatically updates the PULL_REQUEST_TEMPLATE.md file.
+            
+            New template content:
+            
+            ${update_pr_body.outputs.body}
+
+          content-filepath: .github/PULL_REQUEST_TEMPLATE.md
