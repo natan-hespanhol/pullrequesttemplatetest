@@ -1,0 +1,35 @@
+name: Sync PR Template on Pull Request
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+env:
+  CENTRAL_REPO: 'natan-hespanhol/pullrequesttemplate'
+
+jobs:
+  sync-template:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch template from central repository
+        run: |
+          git clone https://github.com/${{ env.CENTRAL_REPO }} central-repo
+
+      - name: Compare and update template
+        run: |
+          mkdir -p .github
+          if ! cmp -s central-repo/PULL_REQUEST_TEMPLATE.md .github/pull_request_template.md; then
+            cp central-repo/PULL_REQUEST_TEMPLATE.md .github/pull_request_template.md
+          else
+            echo "Template is already up-to-date."
+            exit 0
+          fi
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update PR template to match central repository"
+          file_pattern: .github/pull_request_template.md
