@@ -1,0 +1,29 @@
+name: Sync PR Template
+
+on:
+  repository_dispatch:
+    types: [template-updated] # Optional: use repository dispatch for more control
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout template repository
+        uses: actions/checkout@v4
+        with:
+          repository: natan-hespanhol/pullrequesttemplate
+          path: .
+
+      - name: Copy template file
+        run: |
+          mkdir -p .github
+          cp PULL_REQUEST_TEMPLATE.md .github/pull_request_template.md
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Sync PR template from central repository"
+          file_pattern: .github/pull_request_template.md
