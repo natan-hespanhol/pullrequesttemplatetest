@@ -1,58 +1,35 @@
-name: Load PULL_REQUEST_TEMPLATE.md from Central Repo
+name: Sync PR Template on Pull Request
 
 on:
   pull_request:
     types: [opened, synchronize]
 
 env:
-  CENTRAL_REPO: 'https://github.com/natan-hespanhol/pullrequesttemplate'
+  CENTRAL_REPO: 'natan-hespanhol/pullrequesttemplate'
 
 jobs:
-  load-template:
+  sync-template:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout target repo
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Checkout central repo
-        uses: actions/checkout@v3
-        with:
-          repository: natan-hespanhol/pullrequesttemplate
-          path: central-repo
-
-      - name: Copy PULL_REQUEST_TEMPLATE.md
+      - name: Fetch template from central repository
         run: |
-          cp central-repo/PULL_REQUEST_TEMPLATE.md .github/
+          git clone https://github.com/${{ env.CENTRAL_REPO }} central-repo
 
-      - name: Update PR body
-        id: update_pr_body
-        uses: peter-evans/create-pull-request@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: '[Auto] Updated PULL_REQUEST_TEMPLATE.md'
-          body: |
-            This pull request automatically updates the PULL_REQUEST_TEMPLATE.md file.
-            
-            Changes:
-            - Updated from central repo: ${CENTRAL_REPO}
-            
-            Please review the changes and submit this pull request if everything looks good.
-          content-filepath: .github/PULL_REQUEST_TEMPLATE.md
-
-      - name: Delete local template file
+      - name: Compare and update template
         run: |
-          rm .github/PULL_REQUEST_TEMPLATE.md
+          mkdir -p .github
+          if ! cmp -s central-repo/PULL_REQUEST_TEMPLATE.md .github/pull_request_template.md; then
+            cp central-repo/PULL_REQUEST_TEMPLATE.md .github/pull_request_template.md
+          else
+            echo "Template is already up-to-date."
+            exit 0
+          fi
 
-      - name: Update PR body with new template
-        uses: peter-evans/create-pull-request@v3
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: '[Auto] Updated PULL_REQUEST_TEMPLATE.md'
-          body: |
-            This pull request automatically updates the PULL_REQUEST_TEMPLATE.md file.
-            
-            New template content:
-            
-            ${update_pr_body.outputs.body}
-
-          content-filepath: .github/PULL_REQUEST_TEMPLATE.md
+          commit_message: "Update PR template to match central repository"
+          file_pattern: .github/pull_request_template.md
